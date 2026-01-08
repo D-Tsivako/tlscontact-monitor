@@ -13,8 +13,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
       - name: Run monitor
-        id: monitor
         run: |
           python check_tls.py > output.txt
           cat output.txt
