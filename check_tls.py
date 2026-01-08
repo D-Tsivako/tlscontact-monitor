@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from bs4 import BeautifulSoup
 
-URL = "https://visas-it.tlscontact.com/it-it/country/by/vac/byMSQ2it/news"
+URL = "https://visas-it.tlscontact.com/en-us/country/by/vac/byMSQ2it/news"
 LOG_FILE = "changes.log"
 
 def send_telegram(msg):
@@ -36,7 +36,7 @@ current_hash = hashlib.md5(news_text.encode()).hexdigest()
 old_hash = os.environ.get("PAGE_HASH")
 
 if old_hash and old_hash != current_hash:
-    message = "TLSContact NEWS updated\nhttps://visas-it.tlscontact.com/it-it/country/by/vac/byMSQ2it/news"
+    message = "TLSContact NEWS updated\nhttps://visas-it.tlscontact.com/en-us/country/by/vac/byMSQ2it/news"
     log_change(message)
     send_telegram(
         f"📰 {message}\n"
