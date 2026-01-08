@@ -32,10 +32,10 @@ jobs:
         run: |
           echo "PAGE_HASH=$(grep PAGE_HASH output.txt | cut -d= -f2)" >> $GITHUB_ENV
 
-      - name: Commit log file if changed
+      - name: Commit log and state if changed
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add changes.log || true
-          git commit -m "Log TLSContact page change" || true
+          git add changes.log last_news.txt || true
+          git commit -m "Log TLSContact news change" || true
           git push || true
