@@ -3,9 +3,11 @@ import hashlib
 import os
 from datetime import datetime
 from bs4 import BeautifulSoup
+import difflib
 
-URL = "https://visas-it.tlscontact.com/en-us/country/by/vac/byMSQ2it/news"
+URL = "https://visas-it.tlscontact.com/it-it/country/by/vac/byMSQ2it/news"
 LOG_FILE = "changes.log"
+STATE_FILE = "last_news.txt"
 
 def send_telegram(msg):
     token = os.environ["TG_TOKEN"]
@@ -13,34 +15,53 @@ def send_telegram(msg):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     requests.post(url, data={"chat_id": chat_id, "text": msg})
 
-def log_change(message):
+def extract_news_text(html):
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator=" ", strip=True)
+    return " ".join(text.split())
+
+def log_change(old, new):
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    with open(LOG_FILE, "a") as f:
-        f.write(f"[{timestamp}] {message}\n")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"\n[{timestamp}]\n")
+        f.write("--- OLD ---\n")
+        f.write(old + "\n")
+        f.write("--- NEW ---\n")
+        f.write(new + "\n")
 
-response = requests.get(
-    URL,
-    timeout=30,
-    headers={"User-Agent": "Mozilla/5.0"}
-)
+def telegram_diff(old, new):
+    diff = list(difflib.ndiff(old.split(), new.split()))
+    added = [w[2:] for w in diff if w.startswith("+ ")]
+    removed = [w[2:] for w in diff if w.startswith("- ")]
 
-soup = BeautifulSoup(response.text, "html.parser")
+    def shorten(words, limit=40):
+        return " ".join(words[:limit]) + ("..." if len(words) > limit else "")
 
-# 🔍 Extract ONLY news text
-news_section = soup.get_text(separator=" ", strip=True)
+    msg = (
+        "📰 TLSContact NEWS updated\n\n"
+        f"➖ Old:\n{shorten(old.split())}\n\n"
+        f"➕ New:\n{shorten(new.split())}"
+    )
+    return msg
 
-# Optional cleanup
-news_text = " ".join(news_section.split())
+response = requests.get(URL, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+news_text = extract_news_text(response.text)
+
+# Load previous state
+old_text = ""
+if os.path.exists(STATE_FILE):
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        old_text = f.read()
 
 current_hash = hashlib.md5(news_text.encode()).hexdigest()
 old_hash = os.environ.get("PAGE_HASH")
 
 if old_hash and old_hash != current_hash:
-    message = "TLSContact NEWS updated\nhttps://visas-it.tlscontact.com/en-us/country/by/vac/byMSQ2it/news"
-    log_change(message)
-    send_telegram(
-        f"📰 {message}\n"
-        f"Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
-    )
+    log_change(old_text, news_text)
+    send_telegram(telegram_diff(old_text, news_text))
+
+# Save current state
+with open(STATE_FILE, "w", encoding="utf-8") as f:
+    f.write(news_text)
 
 print(f"PAGE_HASH={current_hash}")
