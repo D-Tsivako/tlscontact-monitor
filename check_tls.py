@@ -17,6 +17,6 @@ current_hash = hashlib.md5(content.encode()).hexdigest()
 old_hash = os.environ.get("PAGE_HASH")
 
 if old_hash and old_hash != current_hash:
-    send_telegram("⚠️ TLSContact page changed!\nCheck now.")
+    send_telegram("⚠️ TLSContact page changed!\nCheck now.\nhttps://visas-it.tlscontact.com/en-us/country/by/vac/byMSQ2it/news")
 
 print(f"PAGE_HASH={current_hash}")
